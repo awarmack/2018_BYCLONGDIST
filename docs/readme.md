@@ -1,6 +1,11 @@
 2018 BYC Long Distance Race
 ================
 
+Background
+----------
+
+The Bayview Yacht Club hosts an annual Long Distance race around Lake St. Clair in Michigan. This is an analysis of the performance of the Yacht Zubenelgenubi in that race.
+
 Source Data
 -----------
 
@@ -13,16 +18,35 @@ The data is then read into [Expedition](http://www.expeditionmarine.com/about.ht
 Load Data
 ---------
 
-    ## ── Attaching packages ────────────────────────────────────────── tidyverse 1.2.1 ──
+``` r
+library(tidyverse)
 
-    ## ✔ ggplot2 3.0.0     ✔ purrr   0.2.5
-    ## ✔ tibble  1.4.2     ✔ dplyr   0.7.6
-    ## ✔ tidyr   0.8.1     ✔ stringr 1.3.1
-    ## ✔ readr   1.1.1     ✔ forcats 0.3.0
+#Read the Raw Data
+expdat <- read.csv("../raw_data/exp_log.csv", stringsAsFactors = FALSE)
 
-    ## ── Conflicts ───────────────────────────────────────────── tidyverse_conflicts() ──
-    ## ✖ dplyr::filter() masks stats::filter()
-    ## ✖ dplyr::lag()    masks stats::lag()
+#Change the Time
+expdat$time <- as.POSIXct((expdat$Utc) * (60*60*24), origin = "1899-12-30", tz = "GMT")
+attributes(expdat$time )$tzone <- "America/Detroit"
+
+
+#Remove any All NA Columns
+#Find columns where all is NA
+allna <- which(apply(expdat, 2, function(x) all(is.na(x))))   
+
+#remove those columns
+expdat <- expdat %>% select(-allna)
+
+#Select only needed columns
+expdat <- expdat %>% select(time, Bsp, Awa, Aws, Twa, Tws, Twd, Lat, Lon, Hdg, Cog, Sog)
+
+#change names to lowercase for easier handling
+names(expdat) <- tolower(names(expdat))
+
+#Remove any rows where we don't have all data
+expdat <- na.omit(expdat)
+
+summary(expdat)
+```
 
     ##       time                          bsp             awa        
     ##  Min.   :2018-09-15 15:24:39   Min.   :0.000   Min.   :-179.5  
@@ -55,16 +79,38 @@ Load Data
 
 #### Clean up the Expdition Data
 
+``` r
+#Remove huge outliers
+expdat <- expdat[expdat$aws < 30, ]   #we definitely didn't encounter anything over 20 kts
+```
+
 Path Sailed
 -----------
 
 Wind Direction & Speed
 ----------------------
 
-![](readme_files/figure-markdown_github/unnamed-chunk-3-1.png)![](readme_files/figure-markdown_github/unnamed-chunk-3-2.png)
+``` r
+source("../src/optimalPerformanceFunctions.R")
+
+ggplot(expdat) + geom_path(aes(x=time, y=tws)) + ggtitle("True Wind Speed")
+```
+
+![](readme_files/figure-markdown_github/unnamed-chunk-3-1.png)
+
+``` r
+ggplot(expdat) + geom_path(aes(x=time, y=fromNorth(twd))) + ggtitle("True Wind Direction (Deg from North)")
+```
+
+![](readme_files/figure-markdown_github/unnamed-chunk-3-2.png)
 
 Calculate Polar Boatspeed
 -------------------------
+
+``` r
+library(akima)
+library(zoo)
+```
 
     ## 
     ## Attaching package: 'zoo'
@@ -73,9 +119,39 @@ Calculate Polar Boatspeed
     ## 
     ##     as.Date, as.Date.numeric
 
+``` r
+load("../raw_data/polarmodel.rda")
+
+expdat$polar_bsp_target <- getOptV(btw = expdat$twa, vtw = expdat$tws, pol.model)
+expdat$polar_rollmean <- rollmean(expdat$polar_bsp_target, k = 30, na.pad = TRUE)
+
+ggplot(expdat) + 
+  geom_path(aes(x=time, y=polar_bsp_target), color="gray")+
+  geom_path(aes(x=time, y=polar_rollmean))
+```
+
     ## Warning: Removed 29 rows containing missing values (geom_path).
 
 ![](readme_files/figure-markdown_github/unnamed-chunk-4-1.png)
+
+``` r
+  #geom_path(aes(x=time, y=bsp)) 
+```
+
+Distribution of Performance
+---------------------------
+
+``` r
+expdat$off_polar <- expdat$polar_bsp_target - expdat$bsp
+
+expdat$polar_bsp_perc <-  expdat$bsp / expdat$polar_bsp_target * 100
+
+ggplot(expdat) + 
+  geom_histogram(aes(x=polar_bsp_perc), binwidth=3)+
+  scale_x_continuous(limits=c(0,200)) + 
+  geom_vline(xintercept=100) +
+  ggtitle ("% Performance to Polar Target")
+```
 
     ## Warning: Removed 1261 rows containing non-finite values (stat_bin).
 
@@ -83,11 +159,35 @@ Calculate Polar Boatspeed
 
 ![](readme_files/figure-markdown_github/unnamed-chunk-5-1.png)
 
+### Distributino by Wind Speed
+
+``` r
+expdat$tws_range <- cut(expdat$tws, breaks = c(0, 2, 4, 6,  8, 10, 12))
+
+ggplot(expdat) + 
+  geom_histogram(aes(x=polar_bsp_perc), binwidth=3)+
+  scale_x_continuous(limits=c(0,200)) + 
+  geom_vline(xintercept=100)+
+  facet_grid(tws_range ~ .)
+```
+
     ## Warning: Removed 1261 rows containing non-finite values (stat_bin).
 
     ## Warning: Removed 7 rows containing missing values (geom_bar).
 
 ![](readme_files/figure-markdown_github/unnamed-chunk-6-1.png)
+
+### Distribution by Wind Angle
+
+``` r
+expdat$twa_range <- cut(expdat$twa, breaks = seq(-180, 180, by=30))
+
+ggplot(expdat) + 
+  geom_histogram(aes(x=polar_bsp_perc), binwidth=3)+
+  scale_x_continuous(limits=c(0,200)) + 
+  geom_vline(xintercept=100)+
+  facet_grid(twa_range ~ .)
+```
 
     ## Warning: Removed 1261 rows containing non-finite values (stat_bin).
 
@@ -96,7 +196,28 @@ Calculate Polar Boatspeed
 ![](readme_files/figure-markdown_github/unnamed-chunk-7-1.png)
 
 Optimal VMC
-===========
+-----------
+
+``` r
+library(geosphere)
+marks <- data.frame(mk.lon=-82.68310, mk.lat=42.42992)
+
+
+#bearing to mark
+expdat$btm <- expdat$btm <- bearingRhumb(expdat[, c("lon", "lat")], marks)
+
+#Calculate Optimal VMC
+optimalcourse <- mapply(FUN = optvmc, expdat$btm, expdat$twd, expdat$tws, MoreArgs = list(pol.model), SIMPLIFY = FALSE)
+
+optimalcourse <- do.call(bind_rows, optimalcourse)
+  
+expdat <- bind_cols(expdat, optimalcourse[, 4:9])
+```
 
 Save Data
-=========
+---------
+
+``` r
+save(marks, file= "../2018_BYCLongDistance/mark.rda")
+save(expdat, file =  "../2018_BYCLongDistance/expdat.rda")
+```

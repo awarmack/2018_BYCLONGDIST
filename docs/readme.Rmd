@@ -3,6 +3,9 @@ title: "2018 BYC Long Distance Race"
 output: github_document
 ---
 
+##Background
+The Bayview Yacht Club hosts an annual Long Distance race around Lake St. Clair in Michigan. This is an analysis of the performance of the Yacht Zubenelgenubi in that race. 
+
 ##Source Data
 The data from the race is collected from three on-board instruments: 
 - Raymarine Wind Guage
@@ -13,13 +16,9 @@ These devices transmit NMEA sentances which is multiplexed and then broadcast ov
 
 The data is then read into [Expedition](http://www.expeditionmarine.com/about.htm) sailing software and logged as a csv file. 
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
-```
-
 ## Load Data
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 library(tidyverse)
 
 #Read the Raw Data
@@ -91,6 +90,7 @@ ggplot(expdat) +
 
 ```
 
+## Distribution of Performance
 ```{r}
 
 expdat$off_polar <- expdat$polar_bsp_target - expdat$bsp
@@ -105,6 +105,7 @@ ggplot(expdat) +
 
 ```
 
+### Distributino by Wind Speed
 ```{r}
 expdat$tws_range <- cut(expdat$tws, breaks = c(0, 2, 4, 6,  8, 10, 12))
 
@@ -117,6 +118,7 @@ ggplot(expdat) +
   
 ```
 
+### Distribution by Wind Angle
 ```{r}
 expdat$twa_range <- cut(expdat$twa, breaks = seq(-180, 180, by=30))
 
@@ -129,7 +131,7 @@ ggplot(expdat) +
   
 ```
 
-# Optimal VMC
+## Optimal VMC
 ```{r}
 library(geosphere)
 marks <- data.frame(mk.lon=-82.68310, mk.lat=42.42992)
@@ -147,7 +149,7 @@ expdat <- bind_cols(expdat, optimalcourse[, 4:9])
 
 ```
 
-#Save Data
+## Save Data
 ```{r}
 save(marks, file= "../2018_BYCLongDistance/mark.rda")
 save(expdat, file =  "../2018_BYCLongDistance/expdat.rda")
