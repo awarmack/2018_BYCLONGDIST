@@ -1,7 +1,17 @@
 ---
-title: "index"
-output: html_document
+title: "2018 BYC Long Distance Race"
+output: github_document
 ---
+
+##Source Data
+The data from the race is collected from three on-board instruments: 
+- Raymarine Wind Guage
+- Raymarine Boat Speed
+- Garmin GPS Plotter
+
+These devices transmit NMEA sentances which is multiplexed and then broadcast over wifi using a [MiniPlex-3](http://www.shipmodul.com/en/miniplex-3.html). 
+
+The data is then read into [Expedition](http://www.expeditionmarine.com/about.htm) sailing software and logged as a csv file. 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
@@ -9,8 +19,6 @@ knitr::opts_chunk$set(echo = FALSE)
 
 ## Load Data
 
-### Expedition Data
-#### Load the raw expidition data
 ```{r}
 library(tidyverse)
 
@@ -52,16 +60,16 @@ expdat <- expdat[expdat$aws < 30, ]   #we definitely didn't encounter anything o
 
 
 
-#Path Sailed
+##Path Sailed
 
 
 ## Wind Direction & Speed
 ```{r}
 source("../src/optimalPerformanceFunctions.R")
 
-ggplot(expdat) + geom_path(aes(x=time, y=tws))
+ggplot(expdat) + geom_path(aes(x=time, y=tws)) + ggtitle("True Wind Speed")
 
-ggplot(expdat) + geom_path(aes(x=time, y=fromNorth(twd)))
+ggplot(expdat) + geom_path(aes(x=time, y=fromNorth(twd))) + ggtitle("True Wind Direction (Deg from North)")
 ```
 
 
@@ -92,7 +100,8 @@ expdat$polar_bsp_perc <-  expdat$bsp / expdat$polar_bsp_target * 100
 ggplot(expdat) + 
   geom_histogram(aes(x=polar_bsp_perc), binwidth=3)+
   scale_x_continuous(limits=c(0,200)) + 
-  geom_vline(xintercept=100) 
+  geom_vline(xintercept=100) +
+  ggtitle ("% Performance to Polar Target")
 
 ```
 
