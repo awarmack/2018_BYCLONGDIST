@@ -50,20 +50,20 @@ ui <- fluidPage(
             )            
           ), 
           fluidRow(
-            column(6, 
-                   plotOutput("plot1", width=400,height=200))
+            column(12, 
+                   plotOutput("plot1", width="auto",height=200, brush = "plot_brush"))
           ), 
           fluidRow(
-            column(6, 
-                   plotOutput("plot2", width=400,height=200))
+            column(12, 
+                   plotOutput("plot2", width="auto",height=200))
           ),
           fluidRow(
-             column(6, 
-                    plotOutput("hist1", width=400,height=150))
+             column(12, 
+                    plotOutput("hist1", width="auto",height=150))
           ),
           fluidRow(
-            column(6, 
-                   plotOutput("hist2", width=400,height=150))
+            column(12, 
+                   plotOutput("hist2", width="auto",height=150))
           )
    )
   )
@@ -108,7 +108,7 @@ server <- function(input, output, session) {
     plotrange <- quantile(expdat[, input$plotvar1], c(.01, .99), na.rm=TRUE)
     
     ggplot(expdat) + geom_path(aes_string(x="time", y=input$plotvar1, color=input$colorvar))+
-      scale_color_viridis_c(limits=colorrange) + 
+      scale_color_viridis(limits=colorrange) + 
       scale_y_continuous(limits=plotrange)
     
   })
@@ -121,7 +121,7 @@ server <- function(input, output, session) {
     plotrange <- quantile(expdat[, input$plotvar2], c(.01, .99), na.rm=TRUE)
     
     ggplot(expdat) + geom_path(aes_string(x="time", y=input$plotvar2, color=input$colorvar))+
-      scale_color_viridis_c(limits=colorrange) + 
+      scale_color_viridis(limits=colorrange) + 
       scale_y_continuous(limits=plotrange)
     
   })
