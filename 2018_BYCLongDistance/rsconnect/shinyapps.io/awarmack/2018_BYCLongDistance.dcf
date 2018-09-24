@@ -5,9 +5,9 @@ account: awarmack
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 450560
-bundleId: 1598289
+bundleId: 1602417
 url: https://awarmack.shinyapps.io/2018_BYCLongDistance/
-when: 1537550185.03019
+when: 1537804650.28624
 asMultiple: FALSE
 asStatic: FALSE
 ignoredFiles: app_old.R
